@@ -31,7 +31,7 @@ Why: one `cmd/worker` with `EVENTWORKER_TYPE=posts|likes|reposts|follows|deletes
 Ordering contract: posts/likes/reposts/deletes are commutative (a matcher/counter/set); follows is window-based, not strict-order — so no per-type ordering guarantee is promised beyond JetStream's per-subject order.
 
 ### D4. Ingest = one ordering owner; cursor written on shutdown + periodically
-Why: Jetstream's inclusive cursor re-delivers the last event on resume, so the pipeline persists the last processed cursor and dedupes the first redelivered event (DedupeKey = `did|collection|operation|rkey|rev`, `seq` for identity/account; also `Nats-Msg-Id` server-side). A time clamp guards against Jetstream/NTP clock skew making the cursor roll back.
+Why: Jetstream's inclusive cursor re-delivers the last event on resume, so the pipeline persists the last processed cursor and dedupes the first redelivered event. **Fixture-verified cursor facts (throughput.md §4):** every frame carries `time_us` (strictly monotonic in the 42,186-event sample) → the resume cursor is last `time_us`; there is **no top-level `seq` anywhere** — `seq` is nested (`identity.seq` / `account.seq`) and unused for commits. DedupeKey = `did|collection|rkey|operation|rev` for commits (`did|collection|rkey|operation` was already unique in-window; `rev` covers update-bumps), `idn:<nested seq>` for identity/account. A time clamp guards against Jetstream/NTP clock skew making the cursor roll back.
 Alternatives considered: multiple ingest replicas with sharded cursors — rejected, the single WS connection is not the bottleneck and one replica makes the cursor story simple and correct.
 
 ### D5. Health/metrics per component, depth-driven HPA
@@ -54,5 +54,4 @@ Greenfield service repo; nothing to migrate. Rollback = revert commits / `kubect
 
 ## Open Questions
 
-- Exact per-collection schema nuances and the true identity/account volume on real data — deferred to the Phase-1 analysis task, which feeds DESIGN.md numbers; the spec contract above is schema-agnostic.
-- Per-type retention (`MaxAge`) tuned to measured throughput — set from the throughput table once captured.
+Now answered by fixture analysis (see throughput.md §4–§5): schema nuances, the cursor key (`time_us`), dedupe-key uniqueness, and identity/account volume (≈1 ev/s floor). Remaining deferrable:** none that change the specs, the approach, or the task breakdown — per-type retention (`MaxAge` = 1 h demo window, ≈2.5M messages at the measured upper bound) is a tunable constant set in Task 2.2, not a design fork.

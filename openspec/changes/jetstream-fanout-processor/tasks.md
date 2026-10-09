@@ -1,7 +1,7 @@
 ## 1. Fixture analysis (feeds DESIGN.md numbers)
 
-- [ ] 1.1 Analyze the committed `testdata/sample.jsonl` (offline, deterministic) and produce `throughput.md`: per-collection event schemas, dedupe-key heuristic confirmation, `seq` monotonicity check, and a per-type throughput table (rate high→low) — verify: `throughput.md` committed with schema + rates, no live-feed subagents used
-- [ ] 1.2 Fold the measured throughput + identity/account volume into DESIGN.md (retention/MaxAge values, replay-window claims) — verify: DESIGN.md references measured numbers from 1.1
+- [x] 1.1 Analyze the committed `testdata/sample.jsonl` (offline, deterministic) and produce `throughput.md`: per-collection event schemas, dedupe-key heuristic confirmation, `seq` monotonicity check, and a per-type throughput table (rate high→low) — verify: `throughput.md` committed with schema + rates, no live-feed subagents used
+- [x] 1.2 Fold the measured throughput + identity/account volume into DESIGN.md (retention/MaxAge values, replay-window claims) — verify: DESIGN.md references measured numbers from 1.1
 
 ## 2. Router, broker, ingest
 
