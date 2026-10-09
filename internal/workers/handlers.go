@@ -207,8 +207,7 @@ type followedRecord struct {
 }
 
 // followHandler alerts on a sliding-window burst of follows per target,
-// rate-limited to once per window per target. In-memory only (Redis is the
-// documented optional path elsewhere; not implemented here).
+// rate-limited to once per window per target. In-memory only.
 type followHandler struct {
 	threshold int
 	counter   *windowCounter

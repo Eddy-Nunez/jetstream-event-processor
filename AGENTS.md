@@ -24,7 +24,7 @@ internal/broker  NATS JetStream client: stream EVENTS, MsgId dedupe, pull consum
 internal/workers per-type handlers: posts matcher, like/repost counters, follow burst, delete TTL (done)
 internal/health  /healthz, /readyz, /metrics (done)
 metrics          eventworker_* Prometheus metrics (done)
-k8s/             manifests: NATS StatefulSet, ingest, 5 workers + HPA, optional redis/localstack (done)
+k8s/             manifests: NATS StatefulSet, ingest, 5 workers + HPA, optional localstack (done)
 DESIGN.md        architecture + decisions (graded centerpiece)
 throughput.md    measured fixture numbers
 README.md        build / deploy / see-it-work
@@ -41,7 +41,7 @@ testdata/sample.jsonl  committed 60 s live capture; DO NOT regenerate casually
 - **Routing stays in Go**: NATS/LocalStack are fanout fabric/sinks, never the routing brain.
 - **OpenSpec**: task tracking lives in the open change. Update tasks.md when a task is done;
   use `/opsx-apply`-style workflow to apply, archive when complete.
-- **PLAN.md scope control**: identity/account drop-at-publish, ingest replica=1, Redis/LocalStack optional.
+- **PLAN.md scope control**: identity/account drop-at-publish, ingest replica=1, LocalStack optional.
 - **Commit convention**: one logical step per commit, message states what and why. Verify with `git status` before committing.
 - **Fixture is as-captured**: never re-marshal/rewrite `testdata/sample.jsonl` lines.
 

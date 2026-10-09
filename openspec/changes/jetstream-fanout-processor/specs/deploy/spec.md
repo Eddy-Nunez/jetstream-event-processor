@@ -1,6 +1,6 @@
 ## Purpose
 
-Cluster topology and operations: manifests that deploy the ingest and per-type workers to local k3s with NATS JetStream as shared durable storage, per-worker scaling and fail isolation, plus an optional Redis and LocalStack story scoped to exactly one demonstration worker each.
+Cluster topology and operations: manifests that deploy the ingest and per-type workers to local k3s with NATS JetStream as shared durable storage, per-worker scaling and fail isolation, plus an optional LocalStack story scoped to exactly one demonstration worker.
 
 ## ADDED Requirements
 
@@ -19,14 +19,14 @@ Each worker type SHALL be its own Deployment with its own HPA (scaling on its ow
 - **THEN** the other worker deployments continue consuming and processing their own subjects, and the failed type's messages accumulate to its DLQ, not to shared storage that blocks others
 
 ### Requirement: Durable broker and optional state stores
-The NATS cluster SHALL run as a StatefulSet with a PVC so buffered events survive restarts; Redis (follows-burst state) and LocalStack (posts→SQS one-type sink) SHALL be explicitly optional and documented, with the core routing demo requiring only NATS.
+The NATS cluster SHALL run as a StatefulSet with a PVC so buffered events survive restarts; LocalStack (posts→SQS one-type sink) SHALL be explicitly optional and documented, with the core routing demo requiring only NATS.
 
 #### Scenario: NATS survives pod restart
 - **WHEN** the NATS pod restarts
 - **THEN** buffered events on `events.*` are still available from the PVC and workers resume without data loss
 
 #### Scenario: Optional stores are additive
-- **WHEN** the cluster is deployed without Redis or LocalStack
+- **WHEN** the cluster is deployed without LocalStack
 - **THEN** the routing demo still works end-to-end; only the follows-burst state store and the SQS sink features are unavailable
 
 ### Requirement: AWS-parity story is documented, not outsourced

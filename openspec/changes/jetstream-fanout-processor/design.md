@@ -1,6 +1,6 @@
 ## Context
 
-See proposal.md — Why. Current repo state: Phase 1 is done and committed — `cmd/capture` produced a bounded 60 s `testdata/sample.jsonl` fixture (42k+ events) and `internal/ingest` has a working, tested-by-use Gorilla WS client with shared raw-frame splitting. There are zero specs/deployments yet. The environment is a Mac with OrbStack k3s (`orb start k8s`, namespace `sample` precedent in sibling repo). Go 1.24 module baseline; NATS JetStream is the intended broker; Redis/LocalStack strictly optional and additive.
+See proposal.md — Why. Current repo state: Phase 1 is done and committed — `cmd/capture` produced a bounded 60 s `testdata/sample.jsonl` fixture (42k+ events) and `internal/ingest` has a working, tested-by-use Gorilla WS client with shared raw-frame splitting. There are zero specs/deployments yet. The environment is a Mac with OrbStack k3s (`orb start k8s`, namespace `sample` precedent in sibling repo). Go 1.24 module baseline; NATS JetStream is the intended broker; LocalStack strictly optional and additive.
 
 ## Goals / Non-Goals
 
@@ -12,7 +12,7 @@ See proposal.md — Why. Current repo state: Phase 1 is done and committed — `
 
 **Non-Goals:**
 - Horizontal scaling of ingest (one WS cursor, one replica — the firehose trim keeps one connection comfortable).
-- A full read-model in Redis (scoped to ONE stateful worker feature: follows burst).
+- A full read-model in LevelDB or similar (no stateful worker features scope it).
 - Kafka/Redpanda or any broker that needs >100 MB/pod — NATS JetStream covers fanout + durability at ~20 MB.
 - LocalStack as a router — the routing brain stays in Go; AWS is a documented parity story plus one optional sink.
 
@@ -27,7 +27,7 @@ Why: JetStream gives durable per-subject streams, server-side `Nats-Msg-Id` dedu
 Alternatives considered: plain NATS core (no durability semantics for replay/DLQ), in-process channels with worker goroutines (no isolation story — one type's stall blocks the process). Rejected.
 
 ### D3. Generic worker binary, per-type by env; real per-type logic
-Why: one `cmd/worker` with `EVENTWORKER_TYPE=posts|likes|reposts|follows|deletes` keeps the per-type surface honest while sharing pull/ack/retry/shutdown plumbing. Each deployment is its own HPA unit scaling on its own queue depth, and owns its DLQ subject. Processing is real: posts keyword/language match, likes/reposts rolling counters + threshold alert, follows sliding-window burst detection (the only stateful one — Redis optional there), deletes TTL tombstone set.
+Why: one `cmd/worker` with `EVENTWORKER_TYPE=posts|likes|reposts|follows|deletes` keeps the per-type surface honest while sharing pull/ack/retry/shutdown plumbing. Each deployment is its own HPA unit scaling on its own queue depth, and owns its DLQ subject. Processing is real: posts keyword/language match, likes/reposts rolling counters + threshold alert, follows sliding-window burst detection (the only stateful one), deletes TTL tombstone set.
 Ordering contract: posts/likes/reposts/deletes are commutative (a matcher/counter/set); follows is window-based, not strict-order — so no per-type ordering guarantee is promised beyond JetStream's per-subject order.
 
 ### D4. Ingest = one ordering owner; cursor written on shutdown + periodically
@@ -38,7 +38,8 @@ Alternatives considered: multiple ingest replicas with sharded cursors — rejec
 Why: readiness for ingest means "WS connected and publishing"; worker readiness means "consumer alive with empty in-flight"; `/metrics` exposes per-type drop/publish/ack counts; queue depth comes from JetStream stream stats, feeding each worker's HPA.
 
 ### D6. Optional stores are isolated, additive, and documented
-Redis (only follows-burst state; in-memory sliding window is the default) and LocalStack (only the posts→SQS notification sink) are each gated behind config so the core demo needs neither.
+LocalStack (the posts→SQS notification sink) is gated behind config so the core demo needs neither it
+nor any external state: follows-burst detection stays in-memory by design.
 
 ## Risks / Trade-offs
 
@@ -50,7 +51,7 @@ Redis (only follows-burst state; in-memory sliding window is the default) and Lo
 
 ## Migration Plan
 
-Greenfield service repo; nothing to migrate. Rollback = revert commits / `kubectl delete -f k8s/`. Deploy order: NATS StatefulSet+Service → ingest → workers → (optional redis/localstack).
+Greenfield service repo; nothing to migrate. Rollback = revert commits / `kubectl delete -f k8s/`. Deploy order: NATS StatefulSet+Service → ingest → workers → (optional localstack).
 
 ## Open Questions
 

@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # Canonical deploy path: kubectl apply -k k8s/
-# (optionals are included so the manifest list is complete; each optional file
+# (optional-localstack is included so the manifest list is complete; the file
 # documents why it is not required by the core demo).
 namespace: eventworker
 resources:
@@ -9,5 +9,4 @@ resources:
   - nats.yaml
   - ingest.yaml
   - workers.yaml
-  - optional-redis.yaml
   - optional-localstack.yaml

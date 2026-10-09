@@ -83,7 +83,7 @@ Documented, never the router. Routing stays in Go in every environment; AWS is a
 
 - **Sink parity:** the posts worker's keyword/language matcher emits an on-hit notification — the one output that naturally maps to SQS/EventBridge. In production that outbox is replaced by the managed service; the ingest/router pipeline is unchanged.
 - **Fabric parity:** the `EVENTS` JetStream stream maps to managed Kafka (MSK) or EventBridge streams with durable retention; `Nats-Msg-Id` dedupe maps to idempotent producers plus consumer offsets; `events.dlq.<type>` maps to per-type dead-letter queues.
-- **Demo vs. prod:** local k3s (NATS StatefulSet + PVC, optional Redis/LocalStack gated behind config) is the demo topology. NATS is a single-node, non-HA stand-in; production runs a JetStream cluster (3+) with S3-backed storage. Nothing about the routing path differs.
+- **Demo vs. prod:** local k3s (NATS StatefulSet + PVC, optional LocalStack gated behind config) is the demo topology. NATS is a single-node, non-HA stand-in; production runs a JetStream cluster (3+) with S3-backed storage. Nothing about the routing path differs.
 
 ## 7. Scale & fail isolation
 

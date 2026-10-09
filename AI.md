@@ -55,10 +55,10 @@ the full test suite and the live smoke went green **only after** reconciliation.
 
 ## Residual risk / not done
 
-- In-memory handler state resets on worker restart (design-accepted; Redis optional path documented but
-  not wired). No cross-type ordering promised. LocalStack sink and Redis follows-state are shipped as
-  optional manifests only. MsgId dedupe window (2 min) + inclusive-cursor dedupe gives exactly-once-ish,
-  not exactly-once, delivery.
+- In-memory handler state resets on worker restart (design-accepted: like/repost/follow windows and
+  delete tombstones are observations, not durable facts — follows burst stays in-memory by design).
+  No cross-type ordering promised. LocalStack sink is shipped as an optional manifest only. MsgId dedupe
+  window (2 min) + inclusive-cursor dedupe gives exactly-once-ish, not exactly-once, delivery.
 - The cluster demo was torn down (`kubectl delete -k k8s/`); README reproduces it.
 
 ## Reproduce

@@ -43,7 +43,7 @@ internal/broker  JetStream stream, dedupe, pull consumers, DLQ
 internal/workers per-type handlers (posts matcher, like/repost counters, follow burst, delete tombstones)
 internal/health  /healthz /readyz /metrics
 internal/metrics eventworker_* Prometheus counters/gauges
-k8s/           namespace, NATS StatefulSet, ingest, 5 workers + HPA, optional redis/localstack
+k8s/           namespace, NATS StatefulSet, ingest, 5 workers + HPA, optional localstack
 Dockerfile     multi-stage; one image (eventworker:dev), k8s picks the binary
 DESIGN.md      architecture + decisions (the graded centerpiece)
 throughput.md  measured fixture numbers (42,186 events)
@@ -133,8 +133,7 @@ and use the host replay path above. Tear down with `kubectl delete -k k8s/`.
 ## Known behaviors & limits (honest)
 
 - **In-memory handler state** (like/repost/follow windows, delete tombstones): a worker restart resets
-  them — acceptable per design (alerts are observations, not durable facts). Redis is the documented
-  optional path for follows-burst state; `k8s/optional-redis.yaml` ships, code is not wired.
+  them — acceptable per design (alerts are observations, not durable facts).
 - **Durable consumers are retained server-side** (`EVENTS-<type>`): existing config wins on restart.
 - **LocalStack** (`k8s/optional-localstack.yaml`) is the documented posts→SQS parity sink; not wired.
 - **Ingest is single-replica by design** (one ordered WS cursor can't shard; not the bottleneck at

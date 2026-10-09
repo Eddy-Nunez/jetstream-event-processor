@@ -13,14 +13,13 @@
 ## 3. Workers
 
 - [x] 3.1 Implement `cmd/worker` generic pull-consumer: bounded concurrency, ack/nak with deferral, `MaxDeliver` → DLQ — verify: `internal/workers/consumer_test.go` (embedded nats-server) acks happy path and lands a poison message on `events.dlq.<type>` after MaxDeliver
-- [x] 3.2 Implement per-type logic: posts (keyword/language matcher + notification log, optional SQS sink), likes/reposts (in-memory rolling counters + threshold alert), follows (sliding-window burst detection, in-memory default, optional Redis), deletes (TTL tombstone set) — verify: `handlers_test.go` fixture contract test (expected 3,309 posts alerts computed independently == handler delta); live demo reproduced 3,309/41/3/1 exactly
+- [x] 3.2 Implement per-type logic: posts (keyword/language matcher + notification log, optional SQS sink), likes/reposts (in-memory rolling counters + threshold alert), follows (sliding-window burst detection, in-memory), deletes (TTL tombstone set) — verify: `handlers_test.go` fixture contract test (expected 3,309 posts alerts computed independently == handler delta); live demo reproduced 3,309/41/3/1 exactly
 - [x] 3.3 Implement graceful shutdown (stop pulling, ack in-flight, flush, persist cursor; `preStop` + `terminationGracePeriodSeconds` in manifests) — verify: consumer drains in-flight on ctx cancel (unit test); SIGTERM path exercised during the live kill-a-worker demo (pending drained to 0, `num_redelivered=0`)
 
 ## 4. k8s manifests
 
 - [x] 4.1 NATS StatefulSet + PVC + Service (optional NATS GUI/exporter) — verify: `kubectl apply -k k8s/` on OrbStack k3s brings up nats-0 with a bound 2Gi PVC; `nats-monitor` service on 8222
 - [x] 4.2 `ingest` Deployment (replica=1, cursor volume) + per-type worker Deployments each with own HPA (JetStream queue-depth), resource limits, DLQ — verify: deployed to OrbStack k3s; killed `worker-likes` mid-replay — other types kept flowing, replacement resumed the durable consumer, pending → 0, no redelivery storm. HPA is CPU-based (k3s substitute) with the queue-depth external-metric path documented in-manifest
-- [x] 4.3 (optional) Redis StatefulSet + PVC for follows-burst state — verify: `k8s/optional-redis.yaml` ships + applies; follows stays in-memory by design (Redis-backed code deliberately not wired; documented in AI.md)
 - [x] 4.4 (optional) LocalStack for posts→SQS notification sink — verify: `k8s/optional-localstack.yaml` ships + applies; sink path documented, not wired (parity story in DESIGN §6)
 
 ## 5. Tests and docs
