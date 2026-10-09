@@ -11,9 +11,9 @@ import (
 
 func TestRoutes(t *testing.T) {
 	cases := []struct {
-		name                string
-		kind, coll, op      string
-		want                classify.Type
+		name           string
+		kind, coll, op string
+		want           classify.Type
 	}{
 		{"post create", "commit", "app.bsky.feed.post", "create", classify.Post},
 		{"post update", "commit", "app.bsky.feed.post", "update", classify.Post},

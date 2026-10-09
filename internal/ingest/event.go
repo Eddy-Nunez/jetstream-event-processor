@@ -14,11 +14,11 @@ import "encoding/json"
 // commits carry no seq at all. time_us is present on every frame and is the
 // global resume cursor.
 type Event struct {
-	DID     string   `json:"did"`
-	TimeUS  int64    `json:"time_us"`
-	Kind    string   `json:"kind"` // commit | identity | account
-	Commit  *Commit  `json:"commit,omitempty"`
-	Identity *IDFrame `json:"identity,omitempty"`
+	DID      string     `json:"did"`
+	TimeUS   int64      `json:"time_us"`
+	Kind     string     `json:"kind"` // commit | identity | account
+	Commit   *Commit    `json:"commit,omitempty"`
+	Identity *IDFrame   `json:"identity,omitempty"`
 	Account  *AcctFrame `json:"account,omitempty"`
 }
 

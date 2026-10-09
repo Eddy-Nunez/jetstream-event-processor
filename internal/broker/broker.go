@@ -95,12 +95,12 @@ func (b *Broker) EnsureStream(ctx context.Context, cfg StreamConfig) error {
 		return nil
 	}
 	_, err := b.js.AddStream(&nats.StreamConfig{
-		Name:     b.cfg.Name,
-		Subjects: b.cfg.Subjects,
-		Storage:  nats.FileStorage,
+		Name:      b.cfg.Name,
+		Subjects:  b.cfg.Subjects,
+		Storage:   nats.FileStorage,
 		Retention: nats.LimitsPolicy,
-		MaxAge:   b.cfg.MaxAge,
-		Discard:  nats.DiscardOld,
+		MaxAge:    b.cfg.MaxAge,
+		Discard:   nats.DiscardOld,
 		// unlimited per-subject history: workers consume at their own pace and
 		// backpressure absorbs spikes instead of dropping events.
 		MaxMsgsPerSubject: -1,

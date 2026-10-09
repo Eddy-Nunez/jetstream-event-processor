@@ -47,14 +47,22 @@ const (
 // per-type DLQ events.<type>.dlq lives in broker terminology).
 func (t Type) Subject() string {
 	switch t {
-	case Delete:   return "events.delete"
-	case Identity: return "events.identity"
-	case Account:  return "events.account"
-	case Post:     return "events.post"
-	case Like:     return "events.like"
-	case Repost:   return "events.repost"
-	case Follow:   return "events.follow"
-	default:       return "events.drop" // never published; observability only
+	case Delete:
+		return "events.delete"
+	case Identity:
+		return "events.identity"
+	case Account:
+		return "events.account"
+	case Post:
+		return "events.post"
+	case Like:
+		return "events.like"
+	case Repost:
+		return "events.repost"
+	case Follow:
+		return "events.follow"
+	default:
+		return "events.drop" // never published; observability only
 	}
 }
 
@@ -64,12 +72,18 @@ func (t Type) String() string { return strings.TrimPrefix(t.Subject(), "events."
 // with (-type) for this type; Drop/Identity/Account have no workers.
 func (t Type) WorkerName() string {
 	switch t {
-	case Post:     return "posts"
-	case Like:     return "likes"
-	case Repost:   return "reposts"
-	case Follow:   return "follows"
-	case Delete:   return "deletes"
-	default:       return ""
+	case Post:
+		return "posts"
+	case Like:
+		return "likes"
+	case Repost:
+		return "reposts"
+	case Follow:
+		return "follows"
+	case Delete:
+		return "deletes"
+	default:
+		return ""
 	}
 }
 
@@ -94,12 +108,12 @@ type routeKey struct {
 // identity/account, we classify them so ingest can count them and drop them
 // by policy; delete is first-class.
 var routes = map[routeKey]Type{
-	{"commit", "app.bsky.feed.post",    "create"}: Post,
-	{"commit", "app.bsky.feed.post",    "update"}: Post,
-	{"commit", "app.bsky.feed.like",    "create"}: Like,
-	{"commit", "app.bsky.feed.like",    "update"}: Like,
-	{"commit", "app.bsky.feed.repost",  "create"}: Repost,
-	{"commit", "app.bsky.feed.repost",  "update"}: Repost,
+	{"commit", "app.bsky.feed.post", "create"}:    Post,
+	{"commit", "app.bsky.feed.post", "update"}:    Post,
+	{"commit", "app.bsky.feed.like", "create"}:    Like,
+	{"commit", "app.bsky.feed.like", "update"}:    Like,
+	{"commit", "app.bsky.feed.repost", "create"}:  Repost,
+	{"commit", "app.bsky.feed.repost", "update"}:  Repost,
 	{"commit", "app.bsky.graph.follow", "create"}: Follow,
 	{"commit", "app.bsky.graph.follow", "update"}: Follow,
 }
