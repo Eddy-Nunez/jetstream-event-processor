@@ -19,7 +19,7 @@
 ## 4. k8s manifests
 
 - [x] 4.1 NATS StatefulSet + PVC + Service (optional NATS GUI/exporter) — verify: `kubectl apply -k k8s/` on OrbStack k3s brings up nats-0 with a bound 2Gi PVC; `nats-monitor` service on 8222
-- [x] 4.2 `ingest` Deployment (replica=1, cursor volume) + per-type worker Deployments each with own HPA (JetStream queue-depth), resource limits, DLQ — verify: deployed to OrbStack k3s; killed `worker-likes` mid-replay — other types kept flowing, replacement resumed the durable consumer, pending → 0, no redelivery storm. HPA is CPU-based (k3s substitute) with the queue-depth external-metric path documented in-manifest
+- [x] 4.2 `ingest` Deployment (replica=1, cursor volume) + per-type worker Deployments each with own HPA (JetStream queue-depth), resource limits, DLQ — verify: deployed to OrbStack k3s; killed `worker-likes` mid-replay — other types kept flowing, replacement resumed the durable consumer, pending → 0, no redelivery storm. HPA is CPU-based (k3s substitute) with the queue-depth external-metric path documented; HPA resources ship as optional `k8s/hpa.yaml` (requires the cluster's metrics-server component, e.g. `k3s enable metrics-server`) so the core demo deploys on any k8s (k3s.io/kind/minikube) — `k8s/load-image.sh` loads the built image into kind/k3s.io/OrbStack runtimes
 - [x] 4.4 (optional) LocalStack for posts→SQS notification sink — verify: `k8s/optional-localstack.yaml` ships + applies; sink path documented, not wired (parity story in DESIGN §6)
 
 ## 5. Tests and docs

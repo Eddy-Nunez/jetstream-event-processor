@@ -83,12 +83,12 @@ Documented, never the router. Routing stays in Go in every environment; AWS is a
 
 - **Sink parity:** the posts worker's keyword/language matcher emits an on-hit notification — the one output that naturally maps to SQS/EventBridge. In production that outbox is replaced by the managed service; the ingest/router pipeline is unchanged.
 - **Fabric parity:** the `EVENTS` JetStream stream maps to managed Kafka (MSK) or EventBridge streams with durable retention; `Nats-Msg-Id` dedupe maps to idempotent producers plus consumer offsets; `events.dlq.<type>` maps to per-type dead-letter queues.
-- **Demo vs. prod:** local k3s (NATS StatefulSet + PVC, optional LocalStack gated behind config) is the demo topology. NATS is a single-node, non-HA stand-in; production runs a JetStream cluster (3+) with S3-backed storage. Nothing about the routing path differs.
+- **Demo vs. prod:** local k3s (NATS StatefulSet + PVC, optional LocalStack gated behind config, HPA optional per `k8s/hpa.yaml`) is the demo topology. NATS is a single-node, non-HA stand-in; production runs a JetStream cluster (3+) with S3-backed storage. Nothing about the routing path differs.
 
 ## 7. Scale & fail isolation
 
 - **Ingest is single-replica and not the bottleneck.** One ordered WS cursor cannot be sharded cleanly across pods, and at a measured ~470–700 ev/s of decode-once-plus-classify work ingest is one small process — the consumption tier is what backpressure is for (`design.md` D4, deploy spec).
-- **Per-type isolation.** Each worker type is its own Deployment with its own HPA (scaling on its own queue depth), resource limits, and DLQ subject. A stuck or saturated type accumulates to its own DLQ and cannot block another type's subject (`deploy spec` scenario "One type fails, others keep flowing").
+- **Per-type isolation.** Each worker type is its own Deployment with its own HPA (scaling on its own queue depth), resource limits, and DLQ subject. A stuck or saturated type accumulates to its own DLQ and cannot block another type's subject (`deploy spec` scenario "One type fails, others keep flowing"). The HPA manifests ship as an *optional* `k8s/hpa.yaml` (they need the cluster's metrics-server component, e.g. `k3s enable metrics-server` — not available on default kind/plain k3s); the core demo is Deployment + probes only and runs on any k8s.
 - **Kill-a-worker guarantee.** Consumers ack after commit; on SIGTERM a worker stops pulling, drains and acks in-flight work inside its grace period, then exits — a killed worker causes redelivery, not loss, and other types keep flowing (workers spec; durable consumers retained across restart).
 - **Measured load summary** (`throughput.md` §1–2; all counts re-verified against the fixture):
 

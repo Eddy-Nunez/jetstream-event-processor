@@ -35,7 +35,7 @@ Why: Jetstream's inclusive cursor re-delivers the last event on resume, so the p
 Alternatives considered: multiple ingest replicas with sharded cursors — rejected, the single WS connection is not the bottleneck and one replica makes the cursor story simple and correct.
 
 ### D5. Health/metrics per component, depth-driven HPA
-Why: readiness for ingest means "WS connected and publishing"; worker readiness means "consumer alive with empty in-flight"; `/metrics` exposes per-type drop/publish/ack counts; queue depth comes from JetStream stream stats, feeding each worker's HPA.
+Why: readiness for ingest means "WS connected and publishing"; worker readiness means "consumer alive with empty in-flight"; `/metrics` exposes per-type drop/publish/ack counts; queue depth comes from JetStream stream stats, feeding each worker's HPA. HPA manifests ship as optional `k8s/hpa.yaml` — the HorizontalPodAutoscaler resource needs the cluster's metrics-server component — so the core demo (Deployments + probes) deploys on any k8s (k3s.io, kind, minikube).
 
 ### D6. Optional stores are isolated, additive, and documented
 LocalStack (the posts→SQS notification sink) is gated behind config so the core demo needs neither it

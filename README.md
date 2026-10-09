@@ -43,7 +43,7 @@ internal/broker  JetStream stream, dedupe, pull consumers, DLQ
 internal/workers per-type handlers (posts matcher, like/repost counters, follow burst, delete tombstones)
 internal/health  /healthz /readyz /metrics
 internal/metrics eventworker_* Prometheus counters/gauges
-k8s/           namespace, NATS StatefulSet, ingest, 5 workers + HPA, optional localstack
+k8s/           namespace, NATS StatefulSet, ingest, 5 workers, optional hpa.yaml + localstack
 Dockerfile     multi-stage; one image (eventworker:dev), k8s picks the binary
 DESIGN.md      architecture + decisions (the graded centerpiece)
 throughput.md  measured fixture numbers (42,186 events)
@@ -101,11 +101,23 @@ Requires Go ≥ 1.26. No live network needed for tests.
    the durable consumer resumes where it left off; pending drains to `0` and nothing is lost or redelivered
    (verified: likes delivered_seq grew 207,895 → 232,266 across a killed pod, `num_redelivered=0`).
 
-## Cluster demo (OrbStack k3s)
+## Cluster demo (any local k8s: k3s.io, kind, minikube, OrbStack)
+
+Verified on OrbStack k3s; the manifests use only standard k8s resources (Services,
+StatefulSets, Deployments, PVCs, probes) plus one *optional* HPA file — so they run unchanged on
+k3s.io (`k3s`), kind, minikube, or a real cluster.
 
 ```sh
-docker build -t eventworker:dev .          # k3s' docker runtime sees the local image
-kubectl apply -k k8s/                      # namespace eventworker: NATS, ingest, 5 workers + HPAs
+docker build -t eventworker:dev .          # build wherever you have Docker
+exec k8s/load-image.sh                      # make it visible to the cluster runtime:
+                                           #   kind   → kind load docker-image
+                                           #   k3s.io → docker save | k3s ctr images import
+                                           #   OrbStack → no-op (shared Docker daemon)
+                                           # (or docker save <img> | <node> ctr images import manually)
+kubectl apply -k k8s/                      # namespace eventworker: NATS, ingest, 5 workers
+                                           #   - remove `- hpa.yaml` here if your cluster lacks
+                                           #     the metrics-server component (default k3s.io/kind);
+                                           #     HPAs are optional, the core demo deploys without
 kubectl get pods -n eventworker            # all 1/1 after ~20s (ConnectRetry absorbs the NATS startup race)
 kubectl port-forward -n eventworker svc/nats 4222:4222 &
 go run ./cmd/ingest -replay testdata/sample.jsonl -nats nats://127.0.0.1:4222   # from the host
@@ -118,6 +130,11 @@ The cluster's `ingest` Deployment (replica=1, cursor PVC) connects to the **live
 (`wss://jetstream2.us-east.bsky.network/subscribe`); in our verification it reached ~400 live events/s
 with a monotonically advancing cursor. To demo offline only, first `kubectl scale deploy/ingest --replicas=0`
 and use the host replay path above. Tear down with `kubectl delete -k k8s/`.
+
+> HPA: `k8s/hpa.yaml` holds the 5 per-worker HorizontalPodAutoscaler resources. They need the cluster's
+> metrics-server component (`k3s enable metrics-server` on k3s.io) — not available on default kind/plain k3s.
+> They're CPU-based; production scales per-worker on NATS queue depth via a metrics adapter (see the
+> comments in `k8s/hpa.yaml`). The core demo (Deployments + probes) does not depend on HPA.
 
 ## CLI contracts
 

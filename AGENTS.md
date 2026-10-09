@@ -24,7 +24,7 @@ internal/broker  NATS JetStream client: stream EVENTS, MsgId dedupe, pull consum
 internal/workers per-type handlers: posts matcher, like/repost counters, follow burst, delete TTL (done)
 internal/health  /healthz, /readyz, /metrics (done)
 metrics          eventworker_* Prometheus metrics (done)
-k8s/             manifests: NATS StatefulSet, ingest, 5 workers + HPA, optional localstack (done)
+k8s/             manifests: NATS StatefulSet, ingest, 5 workers, optional hpa.yaml (metrics-server) + localstack; k8s/load-image.sh (portable image load into kind/k3s.io/OrbStack) (done)
 DESIGN.md        architecture + decisions (graded centerpiece)
 throughput.md    measured fixture numbers
 README.md        build / deploy / see-it-work

@@ -12,7 +12,7 @@ The ingest deployment SHALL run exactly one replica, because the ordered WS curs
 - **THEN** it runs one replica, and the cursor file/state lives with that pod, so resume correctness does not depend on cross-pod coordination
 
 ### Requirement: Per-type worker isolation
-Each worker type SHALL be its own Deployment with its own HPA (scaling on its own JetStream queue depth), resource limits, and DLQ subject, so a stuck or saturated worker of one type cannot block another type's progress.
+Each worker type SHALL be its own Deployment with its own resource limits and DLQ subject, so a stuck or saturated worker of one type cannot block another type's progress; each Deployment SHALL also carry an HPA (scaling on its own JetStream queue depth) when the cluster provides the HorizontalPodAutoscaler resource — provided as optional `k8s/hpa.yaml` (requires metrics-server) so the core demo deploys on clusters without it.
 
 #### Scenario: One type fails, others keep flowing
 - **WHEN** the worker for one type is killed or saturated
