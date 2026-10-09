@@ -1,0 +1,51 @@
+# OPTIONAL — not required by the core demo.
+# Corresponds to the design's optional LocalStack posts→SQS sink (design D6
+# and the AWS-parity story in the deploy spec): ONE type (posts) can notify an
+# SQS queue in production. The router stays in Go — LocalStack is never the
+# routing brain — and the sink code path is deliberately NOT wired into the
+# deployed binaries. Present only to document the topology.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+  namespace: eventworker
+  labels:
+    app: localstack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack
+          ports:
+            - name: gateway
+              containerPort: 4566
+          env:
+            - name: SERVICES
+              value: sqs
+            - name: EDGE_PORT
+              value: "4566"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack
+  namespace: eventworker
+  labels:
+    app: localstack
+spec:
+  type: ClusterIP
+  selector:
+    app: localstack
+  ports:
+    - name: gateway
+      port: 4566
+      targetPort: 4566

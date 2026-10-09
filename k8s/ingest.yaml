@@ -1,0 +1,67 @@
+# Single-replica ingest (deploy spec: "Ingest runs single-replica"): the WS
+# cursor is ONE ordered file owned by ONE pod — horizontal scaling would
+# require sharding the inclusive Jetstream cursor (resume = last processed
+# time_us, dedupe of the first redelivered event), which is explicitly out of
+# scope. The cursor PVC (100Mi, mounted at /data) keeps the resume position
+# across pod restarts/upgrades.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cursor
+  namespace: eventworker
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest
+  namespace: eventworker
+  labels:
+    app: ingest
+spec:
+  replicas: 1 # exactly one: the WS cursor cannot be cleanly sharded
+  selector:
+    matchLabels:
+      app: ingest
+  template:
+    metadata:
+      labels:
+        app: ingest
+    spec:
+      terminationGracePeriodSeconds: 30 # let the cursor be flushed on shutdown
+      containers:
+        - name: ingest
+          image: eventworker:dev
+          imagePullPolicy: IfNotPresent # locally built dev image, not from a registry
+          command: ["/usr/local/bin/ingest"]
+          args:
+            - -nats=nats://nats.eventworker.svc.cluster.local:4222
+            - -cursor=/data/cursor.json
+            - -http=:8080
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: cursor
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: cursor
+          persistentVolumeClaim:
+            claimName: cursor

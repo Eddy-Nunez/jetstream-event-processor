@@ -1,0 +1,384 @@
+# Per-type worker Deployments (deploy spec: "Per-type worker isolation"). Each
+# type fans out on its own live subject events.<type> and dead-letters to
+# events.dlq.<type>; one Deployment + one HPA per type means a stuck or
+# saturated worker of one type can never block another type's progress.
+#
+# Thresholds below are calibrated to testdata/sample.jsonl so that a
+# deploy-then-replay demo observes live alerts: posts keyword/lang matcher,
+# likes/reposts rolling-window per-URI alerts (fixture max per URI: 80/30),
+# follows burst detection (fixture max per target: 24). Tune per environment.
+#
+# HPA: CPU at avg 50% is the out-of-the-box k3s substitute. Production scales
+# each worker on its OWN JetStream queue depth — a prometheus-nats-exporter
+# custom metric (pending messages for the events.<type> consumer) fed through a
+# metrics adapter (external metric) — which needs components k3s does not ship
+# by default, so CPU is used here.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-posts
+  namespace: eventworker
+  labels:
+    app: worker-posts
+    worker-type: posts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-posts
+  template:
+    metadata:
+      labels:
+        app: worker-posts
+        worker-type: posts
+    spec:
+      containers:
+        - name: worker
+          image: eventworker:dev
+          imagePullPolicy: IfNotPresent # locally built dev image, not from a registry
+          command: ["/usr/local/bin/worker"]
+          args:
+            - -nats=nats://nats.eventworker.svc.cluster.local:4222
+            - -type=posts
+            - -keywords=test
+            - -langs=en
+            - -http=:8090
+          ports:
+            - name: http
+              containerPort: 8090
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  # DLQ subject for this type: events.dlq.posts
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-posts
+  namespace: eventworker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker-posts
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-likes
+  namespace: eventworker
+  labels:
+    app: worker-likes
+    worker-type: likes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-likes
+  template:
+    metadata:
+      labels:
+        app: worker-likes
+        worker-type: likes
+    spec:
+      containers:
+        - name: worker
+          image: eventworker:dev
+          imagePullPolicy: IfNotPresent # locally built dev image, not from a registry
+          command: ["/usr/local/bin/worker"]
+          args:
+            - -nats=nats://nats.eventworker.svc.cluster.local:4222
+            - -type=likes
+            - -like-threshold=20
+            - -http=:8090
+          ports:
+            - name: http
+              containerPort: 8090
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  # DLQ subject for this type: events.dlq.likes
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-likes
+  namespace: eventworker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker-likes
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-reposts
+  namespace: eventworker
+  labels:
+    app: worker-reposts
+    worker-type: reposts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-reposts
+  template:
+    metadata:
+      labels:
+        app: worker-reposts
+        worker-type: reposts
+    spec:
+      containers:
+        - name: worker
+          image: eventworker:dev
+          imagePullPolicy: IfNotPresent # locally built dev image, not from a registry
+          command: ["/usr/local/bin/worker"]
+          args:
+            - -nats=nats://nats.eventworker.svc.cluster.local:4222
+            - -type=reposts
+            - -repost-threshold=20
+            - -http=:8090
+          ports:
+            - name: http
+              containerPort: 8090
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  # DLQ subject for this type: events.dlq.reposts
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-reposts
+  namespace: eventworker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker-reposts
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-follows
+  namespace: eventworker
+  labels:
+    app: worker-follows
+    worker-type: follows
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-follows
+  template:
+    metadata:
+      labels:
+        app: worker-follows
+        worker-type: follows
+    spec:
+      containers:
+        - name: worker
+          image: eventworker:dev
+          imagePullPolicy: IfNotPresent # locally built dev image, not from a registry
+          command: ["/usr/local/bin/worker"]
+          args:
+            - -nats=nats://nats.eventworker.svc.cluster.local:4222
+            - -type=follows
+            - -follow-burst=5
+            - -http=:8090
+          ports:
+            - name: http
+              containerPort: 8090
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  # DLQ subject for this type: events.dlq.follows
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-follows
+  namespace: eventworker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker-follows
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-deletes
+  namespace: eventworker
+  labels:
+    app: worker-deletes
+    worker-type: deletes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-deletes
+  template:
+    metadata:
+      labels:
+        app: worker-deletes
+        worker-type: deletes
+    spec:
+      containers:
+        - name: worker
+          image: eventworker:dev
+          imagePullPolicy: IfNotPresent # locally built dev image, not from a registry
+          command: ["/usr/local/bin/worker"]
+          args:
+            - -nats=nats://nats.eventworker.svc.cluster.local:4222
+            - -type=deletes
+            - -http=:8090
+          ports:
+            - name: http
+              containerPort: 8090
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  # DLQ subject for this type: events.dlq.deletes
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-deletes
+  namespace: eventworker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker-deletes
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
