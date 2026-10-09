@@ -122,7 +122,7 @@ func main() {
 		}
 	}()
 
-	b, err := broker.Connect(ctx, *natsURL)
+	b, err := broker.ConnectRetry(ctx, *natsURL, 10, 500*time.Millisecond)
 	if err != nil {
 		log.Error("broker connect", "err", err)
 		os.Exit(1)

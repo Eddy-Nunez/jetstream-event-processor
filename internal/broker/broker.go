@@ -13,6 +13,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -82,6 +83,34 @@ func Connect(ctx context.Context, url string) (*Broker, error) {
 
 // Close closes the underlying NATS connection.
 func (b *Broker) Close() { b.nc.Close() }
+
+// ConnectRetry is Connect with a bounded retry/backoff for startup races
+// (e.g. a Deployment started before the NATS pod is ready). Tries up to
+// attempts times, waiting interval (doubling, capped at 10s) between tries,
+// and gives up on ctx cancellation.
+func ConnectRetry(ctx context.Context, url string, attempts int, interval time.Duration) (*Broker, error) {
+	var lastErr error
+	for i := 1; i <= attempts; i++ {
+		b, err := Connect(ctx, url)
+		if err == nil {
+			return b, nil
+		}
+		lastErr = err
+		logger().Warn("broker connect retry", "attempt", i, "max", attempts, "err", err)
+		wait := interval * time.Duration(1<<(i-1))
+		if wait > 10*time.Second {
+			wait = 10 * time.Second
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
+	}
+	return nil, lastErr
+}
+
+func logger() *slog.Logger { return slog.Default() }
 
 // JetStream exposes the context for advanced uses (e.g. workers building
 // consumers / publishing DLQ messages).
