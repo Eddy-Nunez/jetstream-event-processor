@@ -14,16 +14,22 @@ Read, in order:
 ## Repo layout
 
 ```
-cmd/capture      Phase-1 bounded capture (done — do not re-run against live feed casually)
-cmd/ingest       WS → decode-once → classify → NATS publish      (Phase 2)
-cmd/worker       generic per-type pull-consumer                   (Phase 3)
+cmd/capture      Phase-1 bounded capture → testdata/sample.jsonl (done — stable fixture, do NOT re-run casually)
+cmd/ingest       WS → decode-once → classify → NATS publish, cursor resume, -replay (done)
+cmd/worker       generic per-type pull-consumer (done)
+Dockerfile       multi-stage; one image (eventworker:dev), k8s picks the binary (done)
 internal/ingest  Jetstream WS client (exists; reused, not rewritten)
-internal/classify routing table  (Phase 2.1 — the graded artifact)
-internal/broker  NATS JetStream client                           (Phase 2.2)
-internal/workers per-type implementations                        (Phase 3)
-internal/health  /healthz, /readyz, /metrics                     (Phase 2.4)
+internal/classify routing table — THE graded artifact (done)
+internal/broker  NATS JetStream client: stream EVENTS, MsgId dedupe, pull consumers, DLQ (done)
+internal/workers per-type handlers: posts matcher, like/repost counters, follow burst, delete TTL (done)
+internal/health  /healthz, /readyz, /metrics (done)
+metrics          eventworker_* Prometheus metrics (done)
+k8s/             manifests: NATS StatefulSet, ingest, 5 workers + HPA, optional redis/localstack (done)
+DESIGN.md        architecture + decisions (graded centerpiece)
+throughput.md    measured fixture numbers
+README.md        build / deploy / see-it-work
+AI.md            honest provenance (what the agent did, what I overrode)
 testdata/sample.jsonl  committed 60 s live capture; DO NOT regenerate casually
-k8s/             manifests (Phase 4)
 ```
 
 ## Discipline (non-negotiable)
