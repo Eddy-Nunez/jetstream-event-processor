@@ -147,6 +147,29 @@ and use the host replay path above. Tear down with `kubectl delete -k k8s/`.
 `-keywords` (csv), `-langs` (csv), `-like-threshold 200`, `-repost-threshold 150`,
 `-follow-burst 30`, `-window 60s`.
 
+## Assumptions
+
+- **One connection, one ordered cursor.** Ingest is a single WS connection (replica=1): a Jetstream
+  cursor can't cleanly shard across pods, and measured throughput (~470–700 ev/s) is far below a single
+  Go process's ceiling. Anything backpressure-worthy happens downstream, not at the socket.
+- **`wantedCollections` trims commit traffic** to the demo collections; `identity`/`account`/`sync`
+  frames always arrive regardless and are dropped at publish after counting (`eventworker_drop_total`).
+- **Worker analytics state is intentionally in-memory.** Likes/reposts/follows windows and delete
+  tombstones reset on restart — alerts are observations, not durable facts. Durability lives in the
+  JetStream stream + durable consumers, which is what matters for a fan-out processor.
+- **Local k3s means one NATS node, no HA.** Production would run a 3+ JetStream cluster; the manifests
+  and code are topology-agnostic, so nothing changes except the broker config.
+- **LocalStack is parity, not wiring.** The optional SQS/EventBridge sink is documented and ships as a
+  manifest, but the demo runs with zero AWS dependencies.
+- **Go ≥ 1.26 and a k8s runtime** (k3s.io / kind / minikube / OrbStack) are required to build and deploy;
+  Docker is the only image-build prerequisite. HPA is optional (needs the cluster's metrics-server).
+- **The fixture is the contract.** `testdata/sample.jsonl` is a one-off committed capture; tests and the
+  deterministic demo replay it. The live feed is used only for the live cluster path, and only the harness
+  in this repo touches it.
+- **We process structure, not content.** Raw post text can contain anything; every path here consumes
+  event metadata/schemas only, and the notification path emits a counter, never post text.
+- **Ordering is per-type, deliberately.** No consumer may assume cross-type ordering (see DESIGN §4).
+
 ## Known behaviors & limits (honest)
 
 - **In-memory handler state** (like/repost/follow windows, delete tombstones): a worker restart resets

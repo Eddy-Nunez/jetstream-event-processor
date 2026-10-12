@@ -83,7 +83,18 @@ Documented, never the router. Routing stays in Go in every environment; AWS is a
 
 - **Sink parity:** the posts worker's keyword/language matcher emits an on-hit notification — the one output that naturally maps to SQS/EventBridge. In production that outbox is replaced by the managed service; the ingest/router pipeline is unchanged.
 - **Fabric parity:** the `EVENTS` JetStream stream maps to managed Kafka (MSK) or EventBridge streams with durable retention; `Nats-Msg-Id` dedupe maps to idempotent producers plus consumer offsets; `events.dlq.<type>` maps to per-type dead-letter queues.
-- **Demo vs. prod:** local k3s (NATS StatefulSet + PVC, optional LocalStack gated behind config, HPA optional per `k8s/hpa.yaml`) is the demo topology. NATS is a single-node, non-HA stand-in; production runs a JetStream cluster (3+) with S3-backed storage. Nothing about the routing path differs.
+- **Demo vs. prod:** local k3s (NATS StatefulSet + PVC, optional LocalStack gated behind config, HPA optional per `k8s/hpa.yaml`) is the demo topology — a smaller, unsecured, single-node instance of the same artifact, with an S3-backed JetStream cluster swapped in for production. Nothing about the routing path differs.
+
+### From prototype to production (the hardening path)
+
+The prototype is a smaller, unsecured, single-node instance of the same artifact — each gap below is the step to production:
+
+- **Durability:** file-store NATS + PVC → JetStream raft cluster (3+) with S3-backed storage; raise `MaxAge` past the demo replay window.
+- **Exactly-once-ish → exactly-once:** the 2-min `MsgId` dedupe window + inclusive-cursor guard cover crash windows; close the rest with an idempotent sink keyed on `DedupeKey` (SQS/EventBridge `MessageDeduplicationId`, or a SQL upsert), making post-window redelivery a no-op.
+- **Security:** pod-local plaintext NATS → TLS + operator/client auth, network isolation, cursor-file permissions, secrets via k8s Secrets.
+- **Observability:** add the fanout SLO (WS→publish→worker-ack latency) to the existing `/metrics`, alert on DLQ ingress (`events.dlq.*`), and switch worker HPA from CPU to a NATS queue-depth adapter (documented in `k8s/hpa.yaml`).
+- **Drift control:** refresh `sample.jsonl` on a schedule and re-run the deterministic demo as a CI golden test, so schema drift surfaces as a diff.
+- **Rollout:** CI per merge (build, `go test ./... -count=1`, replay golden, kill-a-worker recovery job); blue/green per worker Deployment (consumers drain in-flight and resume durably).
 
 ## 7. Scale & fail isolation
 

@@ -2,3 +2,5 @@
 *.test
 /tmp/
 /.pi/
+*.bak
+*.bak-*

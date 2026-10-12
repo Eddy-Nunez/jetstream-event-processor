@@ -35,7 +35,7 @@ Structure record per frame: `{did, time_us, kind, ...kind-specific}` — no top-
 | repost · delete | 143 | 2→2.4 /s | 0.3 % |
 | post · update | 10 | 0.1→0.2 /s | <0.1 % |
 
-Headline: **likes alone are ~68 % of commit volume**; deletes are ~7 %; identity+account are a steady ~1 /s
+Headline: **likes alone are ~68 % of commit volume**; deletes are ~2.8 % (1,181 / 42,101); identity+account are a steady ~1 /s
 floor that arrives regardless of `wantedCollections`.
 
 ## 3. Per-collection schema (sampled 300 records each, verified shapes)
