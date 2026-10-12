@@ -103,23 +103,30 @@ Requires Go ≥ 1.26. No live network needed for tests.
 
 ## Cluster demo (any local k8s: k3s.io, kind, minikube, OrbStack)
 
-Verified on OrbStack k3s; the manifests use only standard k8s resources (Services,
-StatefulSets, Deployments, PVCs, probes) plus one *optional* HPA file — so they run unchanged on
-k3s.io (`k3s`), kind, minikube, or a real cluster.
+Verified on OrbStack k3s and kind v0.24 (Docker Desktop engine); the manifests use only standard
+k8s resources (Services, StatefulSets, Deployments, PVCs, probes) plus one *optional* HPA file —
+so they run unchanged on k3s.io (`k3s`), kind, minikube, or a real cluster.
 
 ```sh
 docker build -t eventworker:dev .          # build wherever you have Docker
-exec k8s/load-image.sh                      # make it visible to the cluster runtime:
+./k8s/load-image.sh                         # make it visible to the cluster runtime:
                                            #   kind   → kind load docker-image
                                            #   k3s.io → docker save | k3s ctr images import
                                            #   OrbStack → no-op (shared Docker daemon)
                                            # (or docker save <img> | <node> ctr images import manually)
+                                           # run as ./k8s/load-image.sh, NOT `exec k8s/load-image.sh`:
+                                           # on an unrecognized runtime the script exits 1, and a
+                                           # top-level `exec` would then close your whole shell
 kubectl apply -k k8s/                      # namespace eventworker: NATS, ingest, 5 workers
                                            #   - remove `- hpa.yaml` here if your cluster lacks
                                            #     the metrics-server component (default k3s.io/kind);
                                            #     HPAs are optional, the core demo deploys without
-kubectl get pods -n eventworker            # all 1/1 after ~20s (ConnectRetry absorbs the NATS startup race)
+kubectl get pods -n eventworker            # all 1/1 after ~20s on a warm node; on a COLD first
+                                           # boot (NATS image pull), workers may restart once — the
+                                           # liveness probe can beat ConnectRetry's backoff. They
+                                           # settle 1/1; durable consumers mean nothing is lost
 kubectl port-forward -n eventworker svc/nats 4222:4222 &
+kubectl port-forward -n eventworker svc/nats-monitor 8222:8222 &   # optional: NATS monitoring (jsz)
 go run ./cmd/ingest -replay testdata/sample.jsonl -nats nats://127.0.0.1:4222   # from the host
 kubectl logs -n eventworker deploy/worker-posts | grep 'event=notify' | wc -l    # 3309
 kubectl delete pod -n eventworker -l app=worker-likes   # kill-a-worker demo: others keep flowing,
@@ -128,8 +135,11 @@ kubectl delete pod -n eventworker -l app=worker-likes   # kill-a-worker demo: ot
 
 The cluster's `ingest` Deployment (replica=1, cursor PVC) connects to the **live** firehose
 (`wss://jetstream2.us-east.bsky.network/subscribe`); in our verification it reached ~400 live events/s
-with a monotonically advancing cursor. To demo offline only, first `kubectl scale deploy/ingest --replicas=0`
-and use the host replay path above. Tear down with `kubectl delete -k k8s/`.
+with a monotonically advancing cursor. **For the deterministic fixture counts above, demo offline**: run
+`kubectl scale deploy/ingest -n eventworker --replicas=0` BEFORE the host replay — otherwise the live
+ingest keeps adding real events to the same stream and every counter moves off the table (observed on a
+fresh apply: ~22k live events mixed in → posts 4,593 / likes 67 / follows 2 instead of 3,309 / 41 / 1).
+Tear down with `kubectl delete -k k8s/`.
 
 > HPA: `k8s/hpa.yaml` holds the 5 per-worker HorizontalPodAutoscaler resources. They need the cluster's
 > metrics-server component (`k3s enable metrics-server` on k3s.io) — not available on default kind/plain k3s.
@@ -176,6 +186,9 @@ and use the host replay path above. Tear down with `kubectl delete -k k8s/`.
   them — acceptable per design (alerts are observations, not durable facts).
 - **Durable consumers are retained server-side** (`EVENTS-<type>`): existing config wins on restart.
 - **LocalStack** (`k8s/optional-localstack.yaml`) is the documented posts→SQS parity sink; not wired.
+  Note: the current `localstack/localstack:latest` image requires `LOCALSTACK_AUTH_TOKEN` (license
+  gate — without a token the pod CrashLoopBackOffs, exit 55). Apply it only if you have a token, or
+  pin an older image tag; the core demo never depends on it either way.
 - **Ingest is single-replica by design** (one ordered WS cursor can't shard; not the bottleneck at
   ~470–700 ev/s).
 - Counter/pruning code amortizes full sweeps (every 4096 adds); per-key expiry is enforced on touch.

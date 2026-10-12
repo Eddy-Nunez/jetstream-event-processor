@@ -18,8 +18,12 @@ if [ -d /opt/orbstack ] || kubectl cluster-info 2>/dev/null | grep -qi orbstack;
   exit 0
 fi
 
-if command -v kind >/dev/null 2>&1 && kubectl cluster-info 2>/dev/null | grep -qi "kind"; then
-  echo "kind detected: kind load docker-image $image"
+# kind detection must NOT rely on `kubectl cluster-info` output: a kind control-plane
+# URL is https://127.0.0.1:<port> and never contains the word "kind", so that grep
+# always misses and the script falls through to the manual instructions. kind always
+# names its kubectl contexts kind-<cluster>, which is the reliable signal.
+if command -v kind >/dev/null 2>&1 && kubectl config current-context 2>/dev/null | grep -q '^kind-'; then
+  echo "kind detected (context $(kubectl config current-context)): kind load docker-image $image"
   exec kind load docker-image "$image"
 fi
 
