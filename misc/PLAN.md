@@ -70,6 +70,10 @@ eventworker/
 └── openspec/              # feature targets + tasks tracked with openspec
 ```
 
+> **OpenSpec decision:** chosen as the task tracker — a spec-driven change (`proposal → design → specs →
+> tasks`) keeps the authoritative, versioned task list beside the code, and `tasks.md` doubles as the
+> verification ledger (each task's completion note records how it was verified).
+
 ---
 ## 3. Phases (tuned to ~2–3 h)
 

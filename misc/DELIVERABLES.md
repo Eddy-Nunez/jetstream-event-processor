@@ -74,11 +74,12 @@ worker contract test against the fixture (3,309 alerts). Hermetic, no network:
 
 | File | Purpose |
 |---|---|
-| `misc/PLAN.md` | the plan the implementation session executed (phases, scope control) |
+| `misc/PLAN.md` | the plan the implementation session executed (phases, scope control, OpenSpec decision) |
 | `throughput.md` | measured fixture facts behind every DESIGN number |
 | `misc/DOCS-REVIEW-LEDGER.md` | the two-history audit: claim → evidence → verdict (~30 claims) |
 | `misc/timeline.md` | full process story with timestamps + presentation cheat-sheet |
 | `AGENTS.md` | repo contract the build sessions followed |
+| `openspec/` | the spec-driven change (proposal → design → specs → tasks) — the authoritative task/verification ledger |
 
 ## 60-second pitch
 
