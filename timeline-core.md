@@ -8,8 +8,8 @@ phase that reviewed these deliverables lives in `DOCS-REVIEW-LEDGER.md` / `timel
 −4 h); git commits store `-0400`, so the rails are consistent. Evidence keys: sessions (`01a11e37` =
 planning, `01a12175` = impl #1, `01a121d8` = impl #2), git SHAs, `subagent-artifacts/`.
 
-> Files named bare (`README.md`, `DESIGN.md`, `AI.md`, `AGENTS.md`, `throughput.md`) live in
-> `eventworker/`; PLAN.md, the ledger, and `DELIVERABLES.md` live in `misc/`.
+> Files named bare (`README.md`, `DESIGN.md`, `AI.md`, `AGENTS.md`, `throughput.md`) live in the
+> repo root; `misc/` holds PLAN.md, the ledger, `timeline.md`, and `DELIVERABLES.md`.
 
 > One-line arc: **plan from the real stream's docs → capture real data once (committed fixture) →
 > build the router in Go over NATS JetStream with per-type workers → verify live on k3s
@@ -90,12 +90,12 @@ Build closed Oct 9 with 12 commits, one logical step each, tests green, live dem
 
 | Deliverable | State at close | Where |
 |---|---|---|
-| Go service — ingest → router → 5 per-type workers | complete, tests green, live-verified | `eventworker/` |
+| Go service — ingest → router → 5 per-type workers | complete, tests green, live-verified | repo root |
 | Dockerfile + k8s manifests | applied on OrbStack k3s; portable (kind/k3s.io/OrbStack) | `k8s/`, `Dockerfile` |
 | README — build/deploy/see-it-work | finalized 19:56 | `README.md` |
 | DESIGN.md — architecture/decisions/alternatives | finalized 19:55 | `DESIGN.md` |
 | Tests — router, dedupe, worker contract | hermetic, `go test ./...` green | `internal/*_test.go` |
-| AI.md / AGENTS.md / throughput.md / openspec | finalized 19:57 | repo root of `eventworker/` |
+| AI.md / AGENTS.md / throughput.md / openspec | finalized 19:57 | repo root |
 
 ---
 
@@ -126,4 +126,4 @@ trail, not a saved log excerpt.
 ---
 
 *Evidence rails: session JSONLs under `~/.pi/agent/sessions/--Users-nunez-Work-assessments-zenity--/`,
-`git log` in `eventworker/`, subagent lane transcripts, and artifact mtimes.*
+`git log` in this repo, subagent lane transcripts, and artifact mtimes.*

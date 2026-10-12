@@ -8,7 +8,7 @@ Repo contract for AI agent sessions working in this repository.
 Core (graded) artifact = the Go routing kernel: **ingest → classify → per-type fanout → independent workers**.
 
 Read, in order:
-1. `../misc/PLAN.md` — the working implementation plan (phases, scope control, deliverable mapping).
+1. `misc/PLAN.md` — the working implementation plan (phases, scope control, deliverable mapping).
 2. `openspec/changes/jetstream-fanout-processor/` — proposal.md, specs/, design.md, tasks.md (the authoritative task list).
 
 ## Repo layout

@@ -125,7 +125,7 @@ that Phase 1.2 of the plan called for. The data decided; nobody overrode anyone.
   `k8s/workers.yaml`; reproduction table in README).
 - **"deletes ~7%" corrected.** `throughput.md` §2 originally claimed deletes were ~7 % of commit
   volume; the fixture says 1,181/42,101 = 2.8 %. DESIGN.md carries the verifiable per-row counts.
-  The two-history audit (`../misc/DOCS-REVIEW-LEDGER.md`, F1) caught that the stale "~7 %" survived in
+  The two-history audit (`misc/DOCS-REVIEW-LEDGER.md`, F1) caught that the stale "~7 %" survived in
   `throughput.md` after the docs believed it dropped — §2 is now corrected. Again: PLAN.md's
   "verify every number against the fixture" rule, applied to the docs themselves.
 - **identity/account drop-at-publish in Go.** `wantedCollections` cannot filter these kinds — they
@@ -181,6 +181,6 @@ go test ./... -race ./internal/workers/   # hermetic, no network
 # local demo in README: docker NATS + ingest -replay + five workers → the exact alert table
 ```
 
-Planning-phase reproduction: `../misc/PLAN.md` contains the phases, scope-control table, and
-deliverable mapping the implementation session executed against; the Jetstream grounding facts in its
+Planning-phase reproduction: `misc/PLAN.md` contains the phases, scope-control table, and
+   deliverable mapping the implementation session executed against; the Jetstream grounding facts in its
 §0 trace to the context-mode doc fetches noted above.
